@@ -1,17 +1,21 @@
 using UnityEngine;
-using System.IO;
 
 namespace WorkflowSystem
 {
     public class WorkflowManager : MonoBehaviour
     {
         public static WorkflowManager Instance { get; private set; }
-        
+
         private Workflow currentWorkflow;
         private int currentStepIndex = 0;
 
+        // Define the "end" string as a constant
+        private const string EndStepId = "end";
+
         public Workflow CurrentWorkflow => currentWorkflow;
         public int CurrentStepIndex => currentStepIndex;
+
+        private IJsonLoader jsonLoader;
 
         void Awake()
         {
@@ -27,21 +31,31 @@ namespace WorkflowSystem
 
         void Start()
         {
+            // Initialize the JSON loader (local for now)
+            jsonLoader = new LocalJsonLoader("workflow.json");
+
+            // Load JSON data
             LoadJsonData();
         }
 
         void LoadJsonData()
         {
-            string filePath = Path.Combine(Application.streamingAssetsPath, "workflow.json");
-            string json = File.ReadAllText(filePath);
-            currentWorkflow = JsonUtility.FromJson<Workflow>(json);
-            UIManager.Instance.DisplayStep(currentWorkflow.stepData[currentStepIndex]);
-
+            string json = jsonLoader.LoadJson();
+            if (!string.IsNullOrEmpty(json))
+            {
+                currentWorkflow = JsonUtility.FromJson<Workflow>(json);
+                UIManager.Instance.DisplayStep(currentWorkflow.stepData[currentStepIndex]);
+            }
+            else
+            {
+                Debug.LogError("Failed to load JSON data.");
+            }
         }
 
         public void NavigateToStep(string nextStepId)
         {
-            if (nextStepId == "end")
+            // Use the constant variable instead of hardcoding "end"
+            if (nextStepId == EndStepId)
             {
                 QuitWorkflow();
                 return;
@@ -61,7 +75,6 @@ namespace WorkflowSystem
         private void QuitWorkflow()
         {
             Debug.Log("Workflow Ended");
-            // Application.Quit(); // Uncomment to quit the application when workflow ends
         }
     }
 
